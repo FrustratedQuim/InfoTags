@@ -1,0 +1,36 @@
+{
+	"schemaVersion": 1,
+	"id": "infotags",
+	"version": "${version}",
+	"name": "InfoTags",
+	"description": "Example data transfer mod",
+	"authors": [
+		"ratger"
+	],
+	"icon": "assets/infotags/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"com.ratger.InfoTags"
+		],
+		"client": [
+			"com.ratger.InfoTagsClient"
+		]
+	},
+	"mixins": [
+		"infotags.mixins.json",
+		{
+			"config": "infotags.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.16.9",
+		"minecraft": ">=1.21.0 <1.22.0",
+		"java": ">=21",
+		"fabric-api": "*"
+	},
+	"suggests": {
+		"another-mod": "*"
+	}
+}
