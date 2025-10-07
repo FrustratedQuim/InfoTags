@@ -1,3 +1,7 @@
+/*
+ * Отмена рендера TextDisplay на случай использования такового вместо дефолтных ников на сервере.
+ */
+
 package com.ratger.mixin.client;
 
 import com.ratger.OnPlayerFocus;
@@ -15,60 +19,40 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import java.util.Map;
-import java.util.WeakHashMap;
-
-// Обработка удаления TextDisplay в случае замены дефолтного ника игрока на таковой
 @Mixin(TextDisplayEntityRenderer.class)
 public class TextDisplayRendererMixin {
 
     @Unique
-    private static final Map<TextDisplayEntityRenderState, TextDisplayEntity> entityMap = new WeakHashMap<>();
+    private static TextDisplayEntity lastTextDisplay = null;
 
-    // Для получения координат TextDisplay
+    // Для вытягивания координат из объекта
     @Inject(
             method = "updateRenderState(Lnet/minecraft/entity/decoration/DisplayEntity$TextDisplayEntity;Lnet/minecraft/client/render/entity/state/TextDisplayEntityRenderState;F)V",
             at = @At("HEAD")
     )
     private void storeEntity(TextDisplayEntity entity, TextDisplayEntityRenderState state, float tickDelta, CallbackInfo ci) {
-        entityMap.put(state, entity);
+        lastTextDisplay = entity;
     }
 
-    // Удаление
+    // Сам рендер
     @Inject(
             method = "render(Lnet/minecraft/client/render/entity/state/TextDisplayEntityRenderState;Lnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider;IF)V",
             at = @At("HEAD"),
             cancellable = true
     )
-    private void hideTextDisplay(
-            TextDisplayEntityRenderState state,
-            MatrixStack matrices,
-            VertexConsumerProvider vertexConsumers,
-            int light,
-            float tickDelta,
-            CallbackInfo ci
-    ) {
-        TextDisplayEntity entity = entityMap.get(state);
-        if (entity == null) return;
-
-        if (TextDisplayManager.isOurTextDisplay(entity)) {
-            return;
-        }
+    private void hideTextDisplay(TextDisplayEntityRenderState state, MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light, float tickDelta, CallbackInfo ci) {
+        if (lastTextDisplay == null || OnPlayerFocus.lastTarget == null || TextDisplayManager.isOurTextDisplay(lastTextDisplay)) return;
 
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.player == null || client.world == null) return;
 
-        for (PlayerEntity player : client.world.getPlayers()) {
-            if (OnPlayerFocus.focusedPlayerNames.contains(player.getName().getString())) {
-                double dx = Math.abs(player.getX() - entity.getX());
-                double dy = entity.getY() - player.getY();
-                double dz = Math.abs(player.getZ() - entity.getZ());
+        PlayerEntity player = OnPlayerFocus.lastTarget;
+        double dx = player.getX() - lastTextDisplay.getX();
+        double dy = lastTextDisplay.getY() - player.getY();
+        double dz = player.getZ() - lastTextDisplay.getZ();
 
-                if (dx <= 1.0 && dz <= 1.0 && dy >= 0 && dy <= 5.0) {
-                    ci.cancel();
-                    break;
-                }
-            }
+        if (dx * dx <= 1.0 && dz * dz <= 1.0 && dy >= 0 && dy <= 5.0) {
+            ci.cancel();
         }
     }
 }

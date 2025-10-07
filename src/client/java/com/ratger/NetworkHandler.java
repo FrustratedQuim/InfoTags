@@ -1,96 +1,101 @@
 package com.ratger;
 
-import com.ratger.payloads.HandshakePayload;
-import com.ratger.payloads.PlayerInfoPayload;
-import com.ratger.payloads.PlayerInfoRequestPayload;
+import com.ratger.payloads.DataTransferPayload;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.minecraft.client.MinecraftClient;
-
-import java.util.HashMap;
-import java.util.Map;
+import net.minecraft.text.MutableText;
+import net.minecraft.text.Style;
+import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 
 public class NetworkHandler {
-    private static boolean handshakeSuccessful = false;
-    private static boolean blockRequests = false;
-    private static boolean receivedServerData = false;
-    private static boolean initialDataRequested = false;
-    private static long joinTime = 0;
-    public static final Map<String, PlayerInfoPayload.PlayerData> playerDataCache = new HashMap<>();
 
-    public static void initialize() {
-        PayloadTypeRegistry.playS2C().register(PlayerInfoPayload.ID, PlayerInfoPayload.CODEC); // Сервер -> Клиент
-        PayloadTypeRegistry.playC2S().register(HandshakePayload.ID, HandshakePayload.CODEC); // Клиент -> Сервер
-        PayloadTypeRegistry.playC2S().register(PlayerInfoRequestPayload.ID, PlayerInfoRequestPayload.CODEC); // Клиент -> Сервер
+    private static boolean isSuccess = false;
 
-        // Обработка пакета с информацией от сервера
-        ClientPlayNetworking.registerGlobalReceiver(PlayerInfoPayload.ID, (payload, context) -> {
-            playerDataCache.put(payload.playerName(), new PlayerInfoPayload.PlayerData(payload.comment(), payload.health(), payload.foodLevel()));
-            receivedServerData = true;
-        });
+    public static void init() {
+        PayloadTypeRegistry.playC2S().register(DataTransferPayload.ID, DataTransferPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(DataTransferPayload.ID, DataTransferPayload.CODEC);
+
+        ClientPlayNetworking.registerGlobalReceiver(DataTransferPayload.ID, (payload, context) ->
+                manageAnswer(payload.content()
+          )
+        );
     }
 
     public static void sendHandshake() {
-        MinecraftClient client = MinecraftClient.getInstance();
-        if (client.player != null && !handshakeSuccessful) {
-            ClientPlayNetworking.send(new HandshakePayload("DataTransferHandshake"));
-            handshakeSuccessful = true;
-            joinTime = System.currentTimeMillis();
-
-            if (!initialDataRequested) {
-                initialDataRequested = true;
-                new Thread(() -> {
-                    try {
-                        Thread.sleep(5000);
-                    } catch (InterruptedException ignored) {}
-                    client.execute(() -> {
-                        if (client.player != null) {
-                            String playerName = client.player.getName().getString();
-                            ClientPlayNetworking.send(new PlayerInfoRequestPayload(playerName));
-                        }
-                    });
-                }).start();
-            }
-        }
-    }
-
-
-    // 20 секунд даётся на случай пинга + низкого тпс, но не на критичном уровне
-    public static void checkHandshakeTimeout() {
-        if (!blockRequests && handshakeSuccessful && !receivedServerData) {
-            long currentTime = System.currentTimeMillis();
-            if (currentTime - joinTime > 20_000) {
-                blockRequests = true;
-            }
-        }
-    }
-
-    // Вытягиваем данные из кэша, либо запрашиваем у сервера
-    public static void requestPlayerData(String playerName) {
-        if (!handshakeSuccessful || blockRequests || playerDataCache.containsKey(playerName)) {
-            if (playerDataCache.containsKey(playerName) && MinecraftClient.getInstance().player == null) {
-                throw new IllegalStateException("Player is null while cached data exists");
-            }
+        if (!ClientPlayNetworking.canSend(DataTransferPayload.ID)) {
+            sendMessage("absent");
             return;
         }
-        String trimmedName = playerName.trim();
-        ClientPlayNetworking.send(new PlayerInfoRequestPayload(trimmedName));
+
+        isSuccess = false;
+
+        ClientPlayNetworking.send(new DataTransferPayload("FirstRequest"));
+
+        new Thread(() -> {
+            try {
+                Thread.sleep(10000);
+            } catch (InterruptedException ignored) {}
+            if (!isSuccess) {
+                sendMessage("timeout");
+            }
+        }).start();
     }
 
-    public static void resetHandshakeAndCache() {
-        handshakeSuccessful = false;
-        blockRequests = false;
-        receivedServerData = false;
-        initialDataRequested = false;
-        playerDataCache.clear();
-        joinTime = 0;
+    public static void sendRequest(String name) {
+        ClientPlayNetworking.send(new DataTransferPayload("getData;" + name));
+        System.out.println("getData;" + name);
     }
 
-    public static boolean isHandshakeSuccessful() {
-        return handshakeSuccessful;
+    public static void manageAnswer(String content) {
+        if (content.equals("success")) {
+            isSuccess = true;
+            OnPlayerFocus.startListening();
+            sendMessage("yes");
+        } else if (content.equals("no_permission")) {
+            isSuccess = true;
+            sendMessage("no");
+        } else if (content.startsWith("giveData")) {
+            String[] data = content.split(";");
+            TextDisplayManager.players.put(data[1], new PlayerData(Double.parseDouble(data[2]), Integer.parseInt(data[3]), data[4]));
+        }
     }
 
-    public static boolean isRequestsBlocked() {
-        return blockRequests;
+    private static void sendMessage(String message) {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.player == null) return;
+
+        MutableText tempMessage = Text.literal("");
+
+        switch (message) {
+            case "yes" -> {
+                MutableText part1 = Text.literal("▍ ").setStyle(Style.EMPTY.withColor(Formatting.DARK_GREEN));
+                MutableText part2 = Text.literal("InfoTags получил разрешение.")
+                        .setStyle(Style.EMPTY.withColor(0x00FF40));
+                tempMessage = part1.append(part2);
+            }
+            case "no" -> {
+                MutableText part1 = Text.literal("▍ ").setStyle(Style.EMPTY.withColor(Formatting.DARK_RED));
+                MutableText part2 = Text.literal("InfoTags получил отказ. Недостаточно прав.")
+                        .setStyle(Style.EMPTY.withColor(0xFF1500));
+                tempMessage = part1.append(part2);
+            }
+            case "absent" -> {
+                MutableText part1 = Text.literal("▍ ").setStyle(Style.EMPTY.withColor(Formatting.DARK_RED));
+                MutableText part2 = Text.literal("Сервер не поддерживает InfoTags.")
+                        .setStyle(Style.EMPTY.withColor(0xFF1500));
+                tempMessage = part1.append(part2);
+            }
+            case "timeout" -> {
+                MutableText part1 = Text.literal("▍ ").setStyle(Style.EMPTY.withColor(Formatting.DARK_RED));
+                MutableText part2 = Text.literal("InfoTags не получил ответ от сервера.")
+                        .setStyle(Style.EMPTY.withColor(0xFF1500));
+                tempMessage = part1.append(part2);
+            }
+        }
+
+        MutableText finalMessage = tempMessage;
+        client.execute(() -> client.player.sendMessage(finalMessage, false));
     }
 }

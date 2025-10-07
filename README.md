@@ -2,20 +2,20 @@
 
 ## Описание
 
-Мод `InfoTags` - пример реализации обмена кастомными данными между модом на клиенте и плагином на сервере. Всё реализовано через собственные каналы, по которым просто предаются пакеты.
+Мод `InfoTags` - пример реализации обмена данными между клиентом и сервером. Используется передача пакетов через кастомный канал.
 
 ## Зависимости
 
 - Fabric API - https://modrinth.com/mod/fabric-api
-- Minecraft 1.21.X
+- Minecraft 1.21.2 - 1.21.8
 - DataTransfer на стороне сервера - https://github.com/FrustratedQuim/DataTransfer
 
 ## Как работает мод
 
-1. **Инициализация**: Мод регистрирует каналы `datatransfer:handshake` и `datatransfer:playerinfo_request` (клиент -> сервер) и `datatransfer:playerinfo` (сервер -> клиент).
-2. **Handshake**: При входе в мир мод отправляет пакет `datatransfer:handshake` с особыми данными для связи с сервером.
-3. **Запрос данных**: Когда игрок смотрит на другого игрока, мод запрашивает данные через `datatransfer:playerinfo_request`. Сервер отвечает данными через `datatransfer:playerinfo`. Конкретно в этой реализации всё сделано через взгляд, но по итогу можно запрашивать данные любым иным способом.
-4. **Отображение данных**: Данные (имя, здоровье, голод) отображаются над головой игрока с помощью `TextDisplay`. Стандартный никнейм и броня скрываются для лучшей видимости. Можно конечно реализовать через кастомный рендер текста, но `TextDisplay` уже предоставляется майнкрафтом - почему бы и не юзать. p.s. На некоторых серверах используется TextDisplay в качестве кастомных ников, поэтому отключение рендера таковых тоже реализовано.
+1. **Инициализация**: Мод регистрирует канал `datatransfer:main` для двустороннего обмена данными.
+2. **Handshake**: При входе в мир мод отправляет пакет-хэндшейк для получения доступа и возможности запроса данных.
+3. **Запрос данных**: При соблюдении условий, мод отправляет пакет с определённым контентом для запроса данных. Остальное уже на стороне сервера. 
+4. **Отображение данных**: Используется предоставляемый игрой TextDisplay, так-как это самый простой и внешне привычный вариант.
 
 ---
 
@@ -23,17 +23,17 @@
 
 ## Description
 
-The `InfoTags` mod is an example of implementing custom data exchange between a client-side mod and a server-side plugin. Everything is implemented through custom channels that simply transmit packets.
+The `InfoTags` mod is an example of implementing data exchange between the client and the server. It uses packet transmission through a custom channel.
 
 ## Dependencies
 
 - Fabric API - https://modrinth.com/mod/fabric-api
-- Minecraft 1.21.X
+- Minecraft 1.21.2 - 1.21.8
 - DataTransfer on the server side - https://github.com/FrustratedQuim/DataTransfer
 
 ## How the mod works
 
-1. **Initialization**: The mod registers the channels `datatransfer:handshake` and `datatransfer:playerinfo_request` (client -> server) and `datatransfer:playerinfo` (server -> client).
-2. **Handshake**: When joining a world, the mod sends a `datatransfer:handshake` packet with specific data to establish a connection with the server.
-3. **Data Request**: When the player looks at another player, the mod requests data via `datatransfer:playerinfo_request`. The server responds with data through `datatransfer:playerinfo`. In this specific implementation, it’s done via line-of-sight, but ultimately, data can be requested in any other way.
-4. **Data Display**: The data (name, health, hunger) is displayed above the player’s head using `TextDisplay`. The default nickname and armor are hidden for better visibility. While it’s possible to implement this through custom text rendering, `TextDisplay` is provided by Minecraft—so why not use it? P.S. Some servers use `TextDisplay` for custom nicknames, so disabling the rendering of those is also implemented.
+1. **Initialization**: The mod registers the channel `datatransfer:main` for two-way data exchange.
+2. **Handshake**: When entering the world, the mod sends a handshake packet to gain access and the ability to request data.
+3. **Data Request**: When certain conditions are met, the mod sends a packet with specific content to request data. The rest is handled on the server side.
+4. **Data Display**: The mod uses the built-in `TextDisplay`, as it is the simplest and most visually familiar option.

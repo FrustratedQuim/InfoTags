@@ -1,3 +1,7 @@
+/*
+ * Скрытие дефолтного ника наблюдаемого игрока.
+ */
+
 package com.ratger.mixin.client;
 
 import com.ratger.OnPlayerFocus;
@@ -9,7 +13,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-// Обработка скрытия ника
 @Mixin(LivingEntityRenderer.class)
 public class LivingEntityRendererMixin {
 
@@ -19,7 +22,11 @@ public class LivingEntityRendererMixin {
             cancellable = true
     )
     private void hideNameTag(LivingEntity entity, double distance, CallbackInfoReturnable<Boolean> cir) {
-        if (entity instanceof PlayerEntity player && OnPlayerFocus.focusedPlayerNames.contains(player.getName().getString())) {
+        if (
+                OnPlayerFocus.lastTarget != null &&
+                entity instanceof PlayerEntity player &&
+                player == OnPlayerFocus.lastTarget
+        ) {
             cir.setReturnValue(false);
         }
     }
