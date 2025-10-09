@@ -29,12 +29,12 @@ public class OnPlayerFocus {
             if (player != lastTarget) {
                 lastTarget = player;
                 lastTargetName = player != null ? player.getName().getString() : "";
-                TextDisplayManager.displayInfo(lastTargetName);
+                TextRenderManager.displayInfo(lastTargetName);
                 return;
             }
 
             if (player != null) {
-                TextDisplayManager.displayInfo(lastTargetName);
+                TextRenderManager.displayInfo(lastTargetName);
             }
         });
     }

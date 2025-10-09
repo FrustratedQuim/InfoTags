@@ -57,7 +57,7 @@ public class NetworkHandler {
             sendMessage("no");
         } else if (content.startsWith("giveData")) {
             String[] data = content.split(";");
-            TextDisplayManager.players.put(data[1], new PlayerData(Double.parseDouble(data[2]), Integer.parseInt(data[3]), data[4]));
+            TextRenderManager.players.put(data[1], new PlayerData(Double.parseDouble(data[2]), Integer.parseInt(data[3]), data[4]));
         }
     }
 

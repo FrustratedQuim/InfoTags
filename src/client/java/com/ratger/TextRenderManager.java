@@ -10,7 +10,7 @@ import net.minecraft.util.math.Vec3d;
 import java.util.HashMap;
 import java.util.Map;
 
-public class TextDisplayManager {
+public class TextRenderManager {
 
     public static double lineHeight = 0.25;
     public static float lineScale = 0.0235f;

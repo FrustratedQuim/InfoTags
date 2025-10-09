@@ -8,11 +8,11 @@ public class InfoTagsClient implements ClientModInitializer {
 	@Override
 	public void onInitializeClient() {
 		NetworkHandler.init();
-		TextDisplayManager.init();
+		TextRenderManager.init();
 
 		ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
 				OnPlayerFocus.stopListening();
-				TextDisplayManager.players.clear();
+				TextRenderManager.players.clear();
 				NetworkHandler.sendHandshake();
 			}
 		);
