@@ -45,7 +45,6 @@ public class NetworkHandler {
 
     public static void sendRequest(String name) {
         ClientPlayNetworking.send(new DataTransferPayload("getData;" + name));
-        System.out.println("getData;" + name);
     }
 
     public static void manageAnswer(String content) {

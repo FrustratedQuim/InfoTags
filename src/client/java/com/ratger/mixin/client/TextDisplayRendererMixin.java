@@ -5,7 +5,6 @@
 package com.ratger.mixin.client;
 
 import com.ratger.OnPlayerFocus;
-import com.ratger.TextDisplayManager;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.DisplayEntityRenderer.TextDisplayEntityRenderer;
@@ -41,7 +40,7 @@ public class TextDisplayRendererMixin {
             cancellable = true
     )
     private void hideTextDisplay(TextDisplayEntityRenderState state, MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light, float tickDelta, CallbackInfo ci) {
-        if (lastTextDisplay == null || OnPlayerFocus.lastTarget == null || TextDisplayManager.isOurTextDisplay(lastTextDisplay)) return;
+        if (lastTextDisplay == null || OnPlayerFocus.lastTarget == null) return;
 
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.player == null || client.world == null) return;
